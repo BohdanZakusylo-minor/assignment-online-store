@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "tw2AwPIgS80=",
+  "success": true,
+  "projectFilePath": "/Volumes/SamsungSSD/assignment-online-store/src/ReviewService/ReviewService.csproj",
+  "expectedPackageFiles": [
+    "/Users/bohdanzakusylo/.nuget/packages/microsoft.aspnetcore.openapi/9.0.2/microsoft.aspnetcore.openapi.9.0.2.nupkg.sha512",
+    "/Users/bohdanzakusylo/.nuget/packages/microsoft.openapi/1.6.17/microsoft.openapi.1.6.17.nupkg.sha512"
+  ],
+  "logs": []
+}
