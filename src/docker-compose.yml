@@ -27,6 +27,19 @@ services:
       - order_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  product-postgres:
+    image: postgres:15
+    container_name: product-postgres
+    environment:
+      - POSTGRES_DB=productdb
+      - POSTGRES_USER=productuser
+      - POSTGRES_PASSWORD=productpass
+    ports:
+      - "5434:5432"
+    volumes:
+      - product_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   review-service:
     build:
       context: ./ReviewService/
@@ -65,6 +78,26 @@ services:
       - order-postgres
     restart: unless-stopped
 
+  product-manager-service:
+    build:
+      context: ./ProductManagerService/
+      dockerfile: Dockerfile
+    container_name: product-manager-service
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./ProductManagerService:/app
+      - /app/bin
+      - /app/obj
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:8082
+      - ConnectionStrings__DefaultConnection=Host=product-postgres;Port=5432;Database=productdb;Username=productuser;Password=productpass
+    depends_on:
+      - product-postgres
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   order_postgres_data:
+  product_postgres_data:
