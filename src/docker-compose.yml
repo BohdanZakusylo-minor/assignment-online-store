@@ -1,18 +1,18 @@
 version: "3"
 
 services:
-  # postgres:
-  #   image: postgres:15
-  #   container_name: review-postgres
-  #   environment:
-  #     - POSTGRES_DB=reviewdb
-  #     - POSTGRES_USER=reviewuser
-  #     - POSTGRES_PASSWORD=reviewpass
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   restart: unless-stopped
+  postgres:
+    image: postgres:15
+    container_name: review-postgres
+    environment:
+      - POSTGRES_DB=reviewdb
+      - POSTGRES_USER=reviewuser
+      - POSTGRES_PASSWORD=reviewpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
   order-postgres:
     image: postgres:15
@@ -67,24 +67,24 @@ services:
     command: server /data --console-address ":9001"
     restart: unless-stopped
 
-  # review-service:
-  #   build:
-  #     context: ./ReviewService/
-  #     dockerfile: Dockerfile
-  #   container_name: review-service
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - ./ReviewService:/app
-  #     - /app/bin
-  #     - /app/obj
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - ASPNETCORE_URLS=http://0.0.0.0:8080
-  #     - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=reviewdb;Username=reviewuser;Password=reviewpass
-  #   depends_on:
-  #     - postgres
-  #   restart: unless-stopped
+  review-service:
+    build:
+      context: ./ReviewService/
+      dockerfile: Dockerfile
+    container_name: review-service
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./ReviewService:/app
+      - /app/bin
+      - /app/obj
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=reviewdb;Username=reviewuser;Password=reviewpass
+    depends_on:
+      - postgres
+    restart: unless-stopped
 
   order-manager-service:
     build:
@@ -128,7 +128,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  # postgres_data:
+  postgres_data:
   order_postgres_data:
   product_postgres_data:
   rabbitmq_data:

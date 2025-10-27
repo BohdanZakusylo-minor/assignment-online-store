@@ -1,6 +1,8 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ProductManagerService.Models;
+using ProductManagerService.Commands;
+using ProductManagerService.DTOs;
+using ProductManagerService.Queries;
 using ProductManagerService.Services;
 
 namespace ProductManagerService.Controllers;
@@ -9,20 +11,29 @@ namespace ProductManagerService.Controllers;
 [Route("[controller]")]
 public class ProductController : ControllerBase
 {
-    private readonly ProductDbContext _context;
-    private readonly ImageService _imageService;
+    private readonly IMediator _mediator;
+    private readonly ILogger<ProductController> _logger;
 
-    public ProductController(ProductDbContext context, ImageService imageService)
+    public ProductController(IMediator mediator, ILogger<ProductController> logger)
     {
-        _context = context;
-        _imageService = imageService;
+        _mediator = mediator;
+        _logger = logger;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetProducts()
     {
-        var products = await _context.Products.ToListAsync();
-        return Ok(products);
+        try
+        {
+            var query = new GetAllProductsQuery();
+            var products = await _mediator.Send(query);
+            return Ok(products);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting products");
+            return StatusCode(500, new { error = "An error occurred while retrieving products" });
+        }
     }
 
     [HttpGet("{id}")]
@@ -33,12 +44,22 @@ public class ProductController : ControllerBase
             return BadRequest(new { error = "Id must be a positive number" });
         }
 
-        var product = await _context.Products.FindAsync(id);
-        if (product == null)
+        try
         {
-            return NotFound(new { error = $"Product with id {id} not found" });
+            var query = new GetProductByIdQuery { ProductId = id };
+            var product = await _mediator.Send(query);
+            
+            if (product == null)
+            {
+                return NotFound(new { error = $"Product with id {id} not found" });
+            }
+            return Ok(product);
         }
-        return Ok(product);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting product {id}");
+            return StatusCode(500, new { error = "An error occurred while retrieving the product" });
+        }
     }
 
     [HttpPost]
@@ -48,113 +69,70 @@ public class ProductController : ControllerBase
         [FromForm] decimal price,
         [FromForm] List<IFormFile> images)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        try
         {
-            return BadRequest(new { error = "Name is required" });
+            var command = new CreateProductCommand
+            {
+                Name = name,
+                Description = description,
+                Price = price,
+                Images = images ?? new List<IFormFile>()
+            };
+
+            var result = await _mediator.Send(command);
+            return CreatedAtAction(nameof(GetProduct), new { id = result.ProductId }, result);
         }
-
-        if (name.Length > 200)
+        catch (ArgumentException ex)
         {
-            return BadRequest(new { error = "Name cannot exceed 200 characters" });
+            return BadRequest(new { error = ex.Message });
         }
-
-        if (string.IsNullOrWhiteSpace(description))
+        catch (Exception ex)
         {
-            return BadRequest(new { error = "Description is required" });
+            _logger.LogError(ex, "Error creating product");
+            return StatusCode(500, new { error = "An error occurred while creating the product" });
         }
-
-        if (description.Length > 1000)
-        {
-            return BadRequest(new { error = "Description cannot exceed 1000 characters" });
-        }
-
-        if (price < 0)
-        {
-            return BadRequest(new { error = "Price cannot be negative" });
-        }
-
-        if (price == 0)
-        {
-            return BadRequest(new { error = "Price must be greater than zero" });
-        }
-
-        // Upload images to blob storage and get URLs
-        List<string> imageUrls = new();
-        if (images != null && images.Any())
-        {
-            imageUrls = await _imageService.UploadImagesAsync(images);
-        }
-
-        // Create product with blob URLs
-        var product = new Product
-        {
-            Name = name,
-            Description = description,
-            Price = price,
-            ImageUrls = imageUrls
-        };
-
-        _context.Products.Add(product);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, product);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateProduct(int id, [FromBody] Product product)
+    public async Task<IActionResult> UpdateProduct(int id, [FromBody] UpdateProductDto updateDto)
     {
         if (id <= 0)
         {
             return BadRequest(new { error = "Id must be a positive number" });
         }
 
-        if (id != product.ProductId)
+        if (id != updateDto.ProductId)
         {
             return BadRequest(new { error = "Id in URL must match ProductId in body" });
         }
 
-        var existingProduct = await _context.Products.FindAsync(id);
-        if (existingProduct == null)
+        try
         {
-            return NotFound(new { error = $"Product with id {id} not found" });
-        }
+            var command = new UpdateProductCommand
+            {
+                ProductId = updateDto.ProductId,
+                Name = updateDto.Name,
+                Description = updateDto.Description,
+                Price = updateDto.Price,
+                ImageUrls = updateDto.ImageUrls
+            };
 
-        if (string.IsNullOrWhiteSpace(product.Name))
+            var product = await _mediator.Send(command);
+            return Ok(product);
+        }
+        catch (KeyNotFoundException ex)
         {
-            return BadRequest(new { error = "Name is required" });
+            return NotFound(new { error = ex.Message });
         }
-
-        if (product.Name.Length > 200)
+        catch (ArgumentException ex)
         {
-            return BadRequest(new { error = "Name cannot exceed 200 characters" });
+            return BadRequest(new { error = ex.Message });
         }
-
-        if (string.IsNullOrWhiteSpace(product.Description))
+        catch (Exception ex)
         {
-            return BadRequest(new { error = "Description is required" });
+            _logger.LogError(ex, $"Error updating product {id}");
+            return StatusCode(500, new { error = "An error occurred while updating the product" });
         }
-
-        if (product.Description.Length > 1000)
-        {
-            return BadRequest(new { error = "Description cannot exceed 1000 characters" });
-        }
-
-        if (product.Price < 0)
-        {
-            return BadRequest(new { error = "Price cannot be negative" });
-        }
-
-        if (product.Price == 0)
-        {
-            return BadRequest(new { error = "Price must be greater than zero" });
-        }
-
-        existingProduct.Name = product.Name;
-        existingProduct.Description = product.Description;
-        existingProduct.Price = product.Price;
-        existingProduct.ImageUrls = product.ImageUrls;
-
-        await _context.SaveChangesAsync();
-        return Ok(existingProduct);
     }
 
     [HttpDelete("{id}")]
@@ -165,14 +143,21 @@ public class ProductController : ControllerBase
             return BadRequest(new { error = "Id must be a positive number" });
         }
 
-        var product = await _context.Products.FindAsync(id);
-        if (product == null)
+        try
         {
-            return NotFound(new { error = $"Product with id {id} not found" });
+            var command = new DeleteProductCommand { ProductId = id };
+            var deleted = await _mediator.Send(command);
+            
+            if (!deleted)
+            {
+                return NotFound(new { error = $"Product with id {id} not found" });
+            }
+            return NoContent();
         }
-
-        _context.Products.Remove(product);
-        await _context.SaveChangesAsync();
-        return NoContent();
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error deleting product {id}");
+            return StatusCode(500, new { error = "An error occurred while deleting the product" });
+        }
     }
 }

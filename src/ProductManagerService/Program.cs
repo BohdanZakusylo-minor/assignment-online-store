@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using ProductManagerService.Models;
+using ProductManagerService.Repositories;
 using ProductManagerService.Services;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,8 +13,14 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ProductDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add ImageService for blob storage
+// Register MediatR for CQRS
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
+// Register N-tier architecture
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ImageService>();
+// Keep IProductService for backward compatibility during transition
+builder.Services.AddScoped<IProductService, ProductService>();
 
 var app = builder.Build();
 
