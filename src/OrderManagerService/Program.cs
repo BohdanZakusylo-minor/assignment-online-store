@@ -31,7 +31,7 @@ eventService.StartListeningOrderValidated(async (validatedEvent) =>
         {
             if (!validatedEvent.IsValid)
             {
-                // Mark order as rejected
+                // Delete invalid order
                 dbContext.Orders.Remove(order);
                 await dbContext.SaveChangesAsync();
                 app.Logger.LogInformation($"Order {validatedEvent.OrderId} rejected due to invalid products");
@@ -39,6 +39,15 @@ eventService.StartListeningOrderValidated(async (validatedEvent) =>
             else
             {
                 app.Logger.LogInformation($"Order {validatedEvent.OrderId} validated successfully");
+                
+                // Wait 5 seconds, then auto-ship the order
+                await Task.Delay(5000);
+                
+                // Set shipment date to current time
+                order.ShipmentDate = DateTime.UtcNow;
+                await dbContext.SaveChangesAsync();
+                
+                app.Logger.LogInformation($"Order {validatedEvent.OrderId} shipped automatically");
             }
         }
     }
