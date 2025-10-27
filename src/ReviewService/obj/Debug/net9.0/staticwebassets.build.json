@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "hfGavErPZVdWeXR6RyCeG0uYIQNkV998MfsLM0l2bTc=",
+  "Source": "ReviewService",
+  "BasePath": "_content/ReviewService",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
