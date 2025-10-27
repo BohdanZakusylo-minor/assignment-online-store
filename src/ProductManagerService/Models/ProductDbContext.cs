@@ -19,6 +19,7 @@ public class ProductDbContext : DbContext
         {
             entity.HasKey(e => e.ProductId);
             entity.Property(e => e.ProductId).ValueGeneratedOnAdd();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Description).IsRequired().HasMaxLength(1000);
             entity.Property(e => e.Price).IsRequired().HasColumnType("decimal(18,2)");
             entity.Property(e => e.ImageUrls)

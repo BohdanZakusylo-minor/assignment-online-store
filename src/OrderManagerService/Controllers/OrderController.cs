@@ -162,6 +162,17 @@ public class OrderController : ControllerBase
         existingOrder.ShipmentDate = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        // Publish OrderShipped event for Azure Function
+        _eventService.PublishOrderShipped(new OrderShippedEvent
+        {
+            OrderId = existingOrder.OrderId,
+            ProductsId = existingOrder.ProductsId,
+            OrderDate = existingOrder.OrderDate,
+            ShipmentDate = existingOrder.ShipmentDate.Value,
+            Destination = existingOrder.Destination
+        });
+
         return Ok(existingOrder);
     }
 

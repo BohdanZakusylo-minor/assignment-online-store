@@ -18,7 +18,6 @@ public class ReviewDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
-            entity.Property(e => e.ProductId).IsRequired();
             entity.Property(e => e.Rating).IsRequired();
             entity.Property(e => e.Comment).HasMaxLength(1000);
             entity.Property(e => e.CreatedAt).IsRequired();

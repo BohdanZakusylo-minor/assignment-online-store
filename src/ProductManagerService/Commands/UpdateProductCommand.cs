@@ -1,6 +1,8 @@
-namespace ProductManagerService.Models;
+using MediatR;
 
-public class Product
+namespace ProductManagerService.Commands;
+
+public class UpdateProductCommand : IRequest<ProductCommandResult>
 {
     public int ProductId { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -8,3 +10,4 @@ public class Product
     public decimal Price { get; set; }
     public List<string> ImageUrls { get; set; } = new();
 }
+

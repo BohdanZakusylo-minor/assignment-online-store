@@ -1,18 +1,18 @@
 version: "3"
 
 services:
-  # postgres:
-  #   image: postgres:15
-  #   container_name: review-postgres
-  #   environment:
-  #     - POSTGRES_DB=reviewdb
-  #     - POSTGRES_USER=reviewuser
-  #     - POSTGRES_PASSWORD=reviewpass
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   restart: unless-stopped
+  postgres:
+    image: postgres:15
+    container_name: review-postgres
+    environment:
+      - POSTGRES_DB=reviewdb
+      - POSTGRES_USER=reviewuser
+      - POSTGRES_PASSWORD=reviewpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
   order-postgres:
     image: postgres:15
@@ -53,24 +53,38 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     restart: unless-stopped
 
-  # review-service:
-  #   build:
-  #     context: ./ReviewService/
-  #     dockerfile: Dockerfile
-  #   container_name: review-service
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - ./ReviewService:/app
-  #     - /app/bin
-  #     - /app/obj
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - ASPNETCORE_URLS=http://0.0.0.0:8080
-  #     - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=reviewdb;Username=reviewuser;Password=reviewpass
-  #   depends_on:
-  #     - postgres
-  #   restart: unless-stopped
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"    # API port
+      - "9001:9001"    # Console port
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+  review-service:
+    build:
+      context: ./ReviewService/
+      dockerfile: Dockerfile
+    container_name: review-service
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./ReviewService:/app
+      - /app/bin
+      - /app/obj
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=reviewdb;Username=reviewuser;Password=reviewpass
+    depends_on:
+      - postgres
+    restart: unless-stopped
 
   order-manager-service:
     build:
@@ -110,10 +124,12 @@ services:
     depends_on:
       - product-postgres
       - rabbitmq
+      - minio
     restart: unless-stopped
 
 volumes:
-  # postgres_data:
+  postgres_data:
   order_postgres_data:
   product_postgres_data:
   rabbitmq_data:
+  minio_data:

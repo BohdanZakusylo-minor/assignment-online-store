@@ -38,29 +38,9 @@ public class ReviewController : ControllerBase
         return Ok(review);
     }
 
-    [HttpGet("product/{productId}")]
-    public async Task<IActionResult> GetReviewsByProduct(int productId)
-    {
-        if (productId <= 0)
-        {
-            return BadRequest(new { error = "ProductId must be a positive number" });
-        }
-
-        var reviews = await _context.Reviews
-            .Where(r => r.ProductId == productId)
-            .OrderByDescending(r => r.CreatedAt)
-            .ToListAsync();
-        
-        return Ok(reviews);
-    }
-
     [HttpPost]
     public async Task<IActionResult> CreateReview([FromBody] Review review)
     {
-        if (review.ProductId <= 0)
-        {
-            return BadRequest(new { error = "ProductId must be a positive number" });
-        }
 
         if (review.Rating < 1 || review.Rating > 5)
         {
