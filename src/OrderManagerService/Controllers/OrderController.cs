@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OrderManagerService.Models;
+using OrderManagerService.Services;
 
 namespace OrderManagerService.Controllers;
 
@@ -9,10 +10,12 @@ namespace OrderManagerService.Controllers;
 public class OrderController : ControllerBase
 {
     private readonly OrderDbContext _context;
+    private readonly EventService _eventService;
 
-    public OrderController(OrderDbContext context)
+    public OrderController(OrderDbContext context, EventService eventService)
     {
         _context = context;
+        _eventService = eventService;
     }
 
     [HttpGet]
@@ -123,7 +126,18 @@ public class OrderController : ControllerBase
 
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetOrder), new { id = order.OrderId }, order);
+        
+        _eventService.PublishOrderCreated(new OrderCreatedEvent
+        {
+            OrderId = order.OrderId,
+            ProductsId = order.ProductsId
+        });
+        
+        return CreatedAtAction(nameof(GetOrder), new { id = order.OrderId }, new 
+        { 
+            order = order,
+            message = "Your order has been placed, please wait for the confirmation"
+        });
     }
 
     [HttpPut("{id}")]

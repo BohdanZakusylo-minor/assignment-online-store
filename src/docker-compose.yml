@@ -40,6 +40,19 @@ services:
       - product_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=rabbituser
+      - RABBITMQ_DEFAULT_PASS=rabbitpass
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
   # review-service:
   #   build:
   #     context: ./ReviewService/
@@ -76,6 +89,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=order-postgres;Port=5432;Database=orderdb;Username=orderuser;Password=orderpass
     depends_on:
       - order-postgres
+      - rabbitmq
     restart: unless-stopped
 
   product-manager-service:
@@ -95,9 +109,11 @@ services:
       - ConnectionStrings__DefaultConnection=Host=product-postgres;Port=5432;Database=productdb;Username=productuser;Password=productpass
     depends_on:
       - product-postgres
+      - rabbitmq
     restart: unless-stopped
 
 volumes:
   # postgres_data:
   order_postgres_data:
   product_postgres_data:
+  rabbitmq_data:
