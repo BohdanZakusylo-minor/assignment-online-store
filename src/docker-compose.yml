@@ -1,18 +1,18 @@
 version: "3"
 
 services:
-  postgres:
-    image: postgres:15
-    container_name: review-postgres
-    environment:
-      - POSTGRES_DB=reviewdb
-      - POSTGRES_USER=reviewuser
-      - POSTGRES_PASSWORD=reviewpass
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
+  # postgres:
+  #   image: postgres:15
+  #   container_name: review-postgres
+  #   environment:
+  #     - POSTGRES_DB=reviewdb
+  #     - POSTGRES_USER=reviewuser
+  #     - POSTGRES_PASSWORD=reviewpass
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
 
   order-postgres:
     image: postgres:15
@@ -27,24 +27,50 @@ services:
       - order_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  review-service:
-    build:
-      context: ./ReviewService/
-      dockerfile: Dockerfile
-    container_name: review-service
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./ReviewService:/app
-      - /app/bin
-      - /app/obj
+  product-postgres:
+    image: postgres:15
+    container_name: product-postgres
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://0.0.0.0:8080
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=reviewdb;Username=reviewuser;Password=reviewpass
-    depends_on:
-      - postgres
+      - POSTGRES_DB=productdb
+      - POSTGRES_USER=productuser
+      - POSTGRES_PASSWORD=productpass
+    ports:
+      - "5434:5432"
+    volumes:
+      - product_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=rabbituser
+      - RABBITMQ_DEFAULT_PASS=rabbitpass
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  # review-service:
+  #   build:
+  #     context: ./ReviewService/
+  #     dockerfile: Dockerfile
+  #   container_name: review-service
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     - ./ReviewService:/app
+  #     - /app/bin
+  #     - /app/obj
+  #   environment:
+  #     - ASPNETCORE_ENVIRONMENT=Development
+  #     - ASPNETCORE_URLS=http://0.0.0.0:8080
+  #     - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=reviewdb;Username=reviewuser;Password=reviewpass
+  #   depends_on:
+  #     - postgres
+  #   restart: unless-stopped
 
   order-manager-service:
     build:
@@ -63,8 +89,31 @@ services:
       - ConnectionStrings__DefaultConnection=Host=order-postgres;Port=5432;Database=orderdb;Username=orderuser;Password=orderpass
     depends_on:
       - order-postgres
+      - rabbitmq
+    restart: unless-stopped
+
+  product-manager-service:
+    build:
+      context: ./ProductManagerService/
+      dockerfile: Dockerfile
+    container_name: product-manager-service
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./ProductManagerService:/app
+      - /app/bin
+      - /app/obj
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:8082
+      - ConnectionStrings__DefaultConnection=Host=product-postgres;Port=5432;Database=productdb;Username=productuser;Password=productpass
+    depends_on:
+      - product-postgres
+      - rabbitmq
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  # postgres_data:
   order_postgres_data:
+  product_postgres_data:
+  rabbitmq_data:
