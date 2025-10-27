@@ -11,6 +11,9 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ProductDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Add ImageService for blob storage
+builder.Services.AddScoped<ImageService>();
+
 var app = builder.Build();
 
 var logger = app.Services.GetRequiredService<ILogger<EventService>>();

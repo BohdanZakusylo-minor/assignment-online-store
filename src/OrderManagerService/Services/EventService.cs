@@ -31,6 +31,7 @@ public class EventService : IDisposable
         // Declare queues
         _channel.QueueDeclare(queue: "order.created", durable: true, exclusive: false, autoDelete: false);
         _channel.QueueDeclare(queue: "order.validated", durable: true, exclusive: false, autoDelete: false);
+        _channel.QueueDeclare(queue: "order.shipped", durable: true, exclusive: false, autoDelete: false);
         
         _logger.LogInformation("EventService connected to RabbitMQ");
     }
@@ -99,6 +100,27 @@ public class EventService : IDisposable
         }
     }
 
+    public void PublishOrderShipped(OrderShippedEvent shippedEvent)
+    {
+        try
+        {
+            var message = JsonSerializer.Serialize(shippedEvent);
+            var body = Encoding.UTF8.GetBytes(message);
+
+            _channel.BasicPublish(
+                exchange: "",
+                routingKey: "order.shipped",
+                basicProperties: null,
+                body: body);
+            
+            _logger.LogInformation($"Published OrderShipped event for Order {shippedEvent.OrderId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error publishing order shipped event");
+        }
+    }
+
     public void StartListeningOrderValidated(Action<OrderValidatedEvent> handler)
     {
         var consumer = new RabbitMQ.Client.Events.EventingBasicConsumer(_channel);
@@ -124,6 +146,33 @@ public class EventService : IDisposable
         
         _channel.BasicConsume(queue: "order.validated", autoAck: true, consumer: consumer);
         _logger.LogInformation("Started listening to order.validated queue");
+    }
+
+    public void StartListeningOrderShipped(Action<OrderShippedEvent> handler)
+    {
+        var consumer = new RabbitMQ.Client.Events.EventingBasicConsumer(_channel);
+        
+        consumer.Received += (model, ea) =>
+        {
+            var body = ea.Body.ToArray();
+            var message = Encoding.UTF8.GetString(body);
+            
+            try
+            {
+                var shippedEvent = JsonSerializer.Deserialize<OrderShippedEvent>(message);
+                if (shippedEvent != null)
+                {
+                    handler(shippedEvent);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing order shipped event");
+            }
+        };
+        
+        _channel.BasicConsume(queue: "order.shipped", autoAck: true, consumer: consumer);
+        _logger.LogInformation("Started listening to order.shipped queue");
     }
 
     public void Dispose()
